@@ -1,31 +1,42 @@
 /**
- * CI/CD:
- * > CI/CD ek process hai jo tumhare code automatically:
- *   - Test karta hai
- *   - Build karta hai
- *   - Deploy karta hai (production pe)
- * > Har baar jab tum code 'git push' karte ho GitHub pe:
- *   - System code pull karta hai
- *   - Tests run karta hau (sab sahi chal rha?)
- *   - Build prepare karta hau (production-ready code)
- *   - Agar sab pass ho gya automatically server pe deploy kar deta hai
- *   - Agar fail ho gya, error report bhej deta hai
- * > Result:
- *   - Fast deployment
- *   - No manual work
- *   - No downtime
- *   - Safer updates
+ * CICD without Pipeline:
+*/
+
+/**
+ * Push it on GitHub:
+ * > git init
+ * > git add .
+ * > git commit -m "test"
+ * > git branch -M main  
+ * > git remote add origin https://github.com/aslam-paasa/cicd-github-actions.git
+ * > git push -u origin main
+*/
+
+/**
+ * Deploy it on render:
+ * > Click on:
+ *   - Add New 
+ *   - Web Service
+ *   - Github-project: cicd-github-actions
+ *     > Root Directory - app
+ *     > Start Command  - npm run dev
+ * > Deploy on Render
+ * > Your backend is now LIVE.
  * 
- *                                 +--->[Fail]
- *                                 |
- *   [code base]--->[test cases]---+
- *                                 |
- *                                 +--->[Pass]--->[main]--->[user]
- *                                             |
- *                                             V
- *                                         Auto-deploy
- * 
- * Note: This time we will use services, not raw deployment.
+ * Note: Update code > Push to GitHub > Auto-deploy on Render
+ *       That's okay for learning, but not okay for real companies.
+*/
+
+/**
+ * The Problem (why CI/CD exists):
+ * > Imagine this situation:
+ *   - You write new code
+ *   - Test FAIL
+ *   - But code still deploys
+ *   - Users see bugs
+ * > So companies say:
+ *   "Deploy only if tests pass"
+ * > This idea is called Continuous Integration (CI).
 */
 
 
@@ -36,46 +47,22 @@
  * > Continuous Integration ka goal:
  *   - Har baar jab developer code push kare, system automatically test
  *     kare ki code sahi kaam kar rha hai ya nahi.
- * > CI Steps:
- *   1. Developer pushes code
- *   2. System Automatically
- *      - Code ko pull karta hai
- *      - Test cases run karta hai
- *      - Linting/formatting check karta hai
- *   3. Agar sab pass, next stage (deployment)
- *   4. Agar fail, developer ko message milta hau 'fix your code!'
-*/
-
-/**
- * Continuous Deployment (CD): 
- * > Deployment ka matlab - code ko production (live users) tak
- *   pahuchana.
- * > Continuous Deployment ka goal:
- *   - Tests pass hone ke baad code automatically deploy ho jaye 
- *     server pe.
- * > CD Steps:
- *   1. CI ke tests pass hue
- *   2. Code automatically deploy ho jata hai
- *   3. PM2 restart karta hai app (without downtime)
- *   4. Nginx serve karta hai new version users ko
+ * > Now, instead of direct deployment, we will create pipelines:
+ *   a. If test fail: No deployment
+ *   b. If test pass: Build + Deploy
+ *    And this automatic checking is done by CI Tools like Jenkins or
+ *    GitHub Actions.
  * 
- * > Benefit:
- *   - No manual uploads
- *   - Always latest version live
- *   - No downtime, no interruption for users
-*/
-
-/** 
- * Example Flow (Code to Deployment)
- *
- * Developer   →   GitHub   →   CI/CD Pipeline   →   Server
- *   |               |               |                 |
- *   |  git push     |               |                 |
- *   |-------------->|  triggers     |                 |
- *                   |-------------->|  test + build   |
- *                                   |---------------->|  deploy + restart
- *                                                     ↓
- *                                               Users see new version 
+ * > Flow: 
+ * 
+ *                                 +--->[Fail]
+ *                                 |
+ *   [code base]--->[test cases]---+
+ *                                 |
+ *                                 +--->[Pass]--->[main]--->[user]
+ *                                             |
+ *                                             V
+ *                                         Auto-deploy
 */
 
 /**
@@ -105,186 +92,201 @@
 */
 
 /**
- * What is a YAML file?
- * > YAML ek simple file format hoti hai jisme indentation (spaces) 
- *   matter karta hai.
- * > Ye config likhne ke liye use hota hai (like JSON but cleaner).
+ * Connecting GitHub Actions with Render:
+ * > To create pipeline, we will use tools like GitHub Action:
+ *   - We can see 'Actions' Button on top of our Project in GitHub.
+ *   - To run test cases we have many actions
+ *   - It will create .github folder in our project repo
+ *   - Inside .github folder, we have workflow and inside that workflow
+ *     we have .yml file that has the actions.
+ *   - But ye sab pipelines kaise lagaya jae:
  * 
- * > Rules:
- *   - Colon (:) ke baad space dena zaroori hai
- *   - Tabs mat use karo, sirf spaces use karo
- *   - '-' means ek item in list
- *   - Capitalization zaruri nahi hoti, but indentation 100% correct
- *     hona chahiye.
- * 
- * > Example:
- *   name: My Workflow
- * 
- *   on:
- *     push:
- *       branches:
- *         - main
- * 
- * > Meaning: Jab bhi koi push karega "main" branch pe, ye workflow
- *            chalega.
+ * > Hum chahte hai ki deployment tabhi ho jab test cases successfully
+ *   pass ho, and for that our first step is to, go to settings of 
+ *   render, we can see two things:
+ *   1. Auto-Deploy:
+ *      > Stop auto-deploy on every commit
+ *      > Change 'On-Commit' to 'After CI Checks Pass'
+ *      > Meaning: "Render, wait for GitHub Actions result"
+ *   2. Deploy Hook? 
+ *      > Deploy Hook = Secret Door
+ *      > It's a private URL
+ *      > When someone hits this URL, Render deploys
+ *        (Only trusted systems should know this.)
+ *      > So, we store it in GitHub Secrets:
+ *        a. Go to Project Repo > Settings
+ *        b. Secrets and Variables > Actions
+ *        c. Click New Repository Secret
+ *        d. Add:
+ *           - Name: RENDER_DEPLOY_HOOK
+ *           - Secret: https://api.render.com/deploy/srv-d52p0t95pdvs73el4sjg?key=Nhn8zOjJyiE
+ *           - Now GitHub Actions can access it safely
+ *   
+ *                                   +--->[Fail]
+ *                                   |
+ *     [code base]--->[test cases]---+
+ *                                   |
+ *                                   +--->[Pass]--->[main]--->[user]
+ *                                               |
+ *                                               V
+ *                                    Call Render Deploy Hook
 */
 
 /**
- * Goal:
- * > Hum chahte hai:
- *   Jab bhi hum code push karein 'main' branch pe:
- *   1. Node.js setup ho
- *   2. Dependencies install ho (npm install)
- *   3. Tests run ho (npm test)
- *   4. Agar sab pass ho, deploy ho humare server pe using SSH.
+ * Writing Pipeline Script: test-and-deploy.yml 
+ * 
+ * 1. What is .github/workflows/test-and-deploy.yml?
+ *    > .github/workflows/ ek special folder hai jaha GitHub Actions
+ *      ke rules likhe jaate hai
+ *    > Simple language mein: "Automation ka instruction manual"
+ * 
+ * 2. test-and-deploy.yml
+ *    > Ye configuration file hai jisme hum GitHub ko bolte hai:
+ *      - Kb run karna hai
+ *      - Kya run karna hai
+ *      - Kis order me run karna hai
+ *    
+ *    a. Workflow ka naam
+ *       > name: Test and Deploy
+ *       > Ye sirf workflow ka display name hai
+ *       > GitHub Actions tab me dikhega
+ *       > Sirf readability ke liye
+ * 
+ *    b. Workflow kab chalega?
+ *       > on:
+ *           push:
+ *             branches:
+ *               - main
+ *       > Iska matlab:
+ *         - Jab bhi main branch pe push karega
+ *         - Ye workflow automatically start ho jayega.
+ * 
+ *    c. Jobs - Kaam ka breakdown
+ *       > jobs:
+ *           test:
+ *           deploy:
+ *       > Hum 2 jobs chala rhe hai:
+ *         1. test   - Pehle tests
+ *         2. deploy - tests pass hone ke baad deploy
+ * 
+ *    d. Job-1: test (sabse important)
+ *       1. test:
+ *           runs-on: ubuntu-latest
+ *           defaults:
+ *             run:
+ *               working-directory: ./app
+ *   
+ *       1.a. Kis machine pe chale?
+ *            > runs-on: ubuntu-latest
+ *            > GitHub ek temporary Linux Machine deta hai
+ *            > Name: ubuntu-latest - Isi machine pe testing hoti hai
+ *              (Iske liye GitHub charge karti hai)
+ * 
+ *       1.b. working-directory: ./app 
+ *            > defaults:
+ *                run:
+ *                  working-directory: ./app
+ *            > Tera Node app ./app folder me hai, isliye commands iske
+ *              andr run honge:
+ *              - npm install
+ *              - npm test
+ *            > Agar ye nhi likhte, commands root folder me chalti
+ * 
+ *       2. steps: Ab testing k liye kon se steps perform karna chahte h
+ *          > Humein Machine mili, ab uss machine pe kya krna hai? 
+ *       
+ *           steps:
+ *             - name: Checkout code
+ *               uses: actions/checkout@v4
+ *       
+ *             - name: Setup Node.js
+ *               uses: actions/setup-node@v4
+ *               with:
+ *                 node-version: 18
+ *       
+ *             - name: Install dependencies
+ *               run: npm install
+ *       
+ *             - name: Run tests
+ *               run: npm test
+ * 
+ *          2.a. Code download karo:
+ *               - name: Checkout code
+ *                 uses: actions/checkout@v4
+ *               - GitHub ki machine empty hoti hai
+ *               - Iss step me: tera github repo ka code uss machine pe
+ *                 copy hota hai
+ *               - Without this, kuch nhi run nahi hoga
+ *          2.b. Node.js install karo
+ *               - name: Setup Node.js
+ *                 uses: actions/setup-node@v4
+ *                 with:
+ *                   node-version: 18
+ *               - Machine me by default Node nahi hota
+ *               - Ye step: Har node.js v18 install karta hai
+ *               - GitHub ye action ready-made deta hai
+ *               - Hum bas use kar rhe hai
+ *          2.c. Dependencies install
+ *               - name: Install dependencies
+ *                 uses: npm install
+ *               - package.json se saare packages install honge
+ *               - Exactly waise hi jaise tu local machine pe karta hai
+ *          2.d. Test run karo
+ *               - name: Run tests
+ *                 uses: npm test
+ *               - Ye line decide karti hai deploy hoga ya nahi
+ *               - Agar: test fail > job fail > aage kuch nhi
+ *                       test pass > job success > deploy job allowed
+ * 
+ *    e. Job-2: deploy
+ * 
+ *        deploy:
+ *          needs: test
+ *          runs-on: ubuntu-latest
+ *   
+ *          steps:
+ *            - name: Deploy to Render
+ *              run: curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK }}
+ * 
+ *       1. deploy:  
+ *            needs: test
+ *          - Iska matlab:
+ *            deploy tabhi chalega jab test job successfully pass ho
+ *    
+ *       2. Machine:
+ *          > runs-on: ubuntu-latest
+ *          > Deploy ke liye bhi ek fresh machine milti hai
+ *    
+ *       3. if: success() then only trigger render deploy hook
+ *    
+ *       4. Deploy ka actual step
+ *          - name: Deploy to Render
+ *          - run: curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK }}
+ *          - Simple words me:
+ *            - Render ne tujhe webhook url diya
+ *            - Wo URL bolta hai: "Isko hit karo, deploy start"
+ *            - curl -X POST: Ek HTTP request bhej rha hai
+ *            - ${{ secrets.RENDER_DEPLOY_HOOK }}:
+ *              - Ye secret value hai
+ *              - GitHub me safely stored hoti hai
+ *              - Code me expose nahi hoti (security)   
+ * 
 */
 
-/**
- * deploy.yml: Automatic Build, Test & Deploy
- * > GitHub Actions ke liye ek instruction manual jisse GitHub ko pta
- *   chalta hai ki humare code ke saath kya krna hai.
- * 
- *    name: Deploy Node.js App
- * 
- * 1. WHEN TO RUN THIS WORKFLOW
- *    on:
- *      push:
- *        branches:
- *          - main        # Jab bhi main branch pe push hoga, ye chalega
- * 
- * 2. JOBS — steps jo run honge
- *    jobs:
- *      build-and-deploy:
- *        runs-on: ubuntu-latest            # GitHub server (Ubuntu Linux) jaha ye steps chalenge
- *    
- *        steps:
- *          # a. Checkout (pull repo code)
- *          - name: Checkout Code
- *            uses: actions/checkout@v3     # Ye GitHub repo ka latest code khinchta hai
- *    
- *          # b. Node.js environment setup
- *          - name: Setup Node.js
- *            uses: actions/setup-node@v3
- *            with:
- *              node-version: '18'          # Node.js environment banata hai (Ubuntu pe)
- *    
- *          # c. Dependencies install
- *          - name: Install Dependencies
- *            run: npm install              # node_modules install karta hai
- *    
- *          # d. Run tests
- *          - name: Run Tests
- *            run: npm test                 # Tumhare test cases run karta hai    
- *    
- *          # e. Deploy to your server
- *          - name: Deploy to Production
- *            if: success()                 # Sirf tab chalega agar tests pass ho jayein
- *            run: |
- *              echo "Connecting to server and deploying..."
- *              ssh -o StrictHostKeyChecking=no ubuntu@your-server-ip "
- *                cd /var/www/myapp &&
- *                git pull origin main &&
- *                npm install &&
- *                pm2 restart all
- *              "
- * 
- * Explanation:
- * 1. name: "Deploy Node.js App"
- *    > Ye workflow ka naam hai
- *    > Ye GitHub Actions dashboard me dikhai dega
- * 
- * 2. on: push -> branches: main
- *    > Ye batata hau kab ye file chalegi
- *    > Jab bhi tum code main branch pe push karoge, ye action
- *      automatically start hoga.
- *    > Example:
- *      - git add .
- *      - git commit -m "new update"
- *      - git push origin main (it auto-trigger deploy.yml)
- * 
- * 3. jobs:
- *    > Ye workflow ke andar "job" hota hai (yani task group).
- *    > Ek job ke andar set of tasks hota hai jo step by step run
- *      hote hai.
- *    > yahan ek hi job hai: build-and-deploy
- *      (ye code build, test, and deploy sab karta hai)
- * 
- * 4. runs-on: ubuntu-latest
- *    > GitHub ke paas apne servers hote hai jahan ye steps run krte h
- *    > Humne bola "Ubuntu latest use karo" - matlab Linux env milega.
- * 
- * 
- * Let's break - 
- * > name: Deploy to Production
- *   a. App folder me jata hai         (cd /var/www/myapp)
- *   b. Latest code pull karta hai     (git pull origin main)
- *   c. Dependencies install karta hai (npm install)
- *   d. PM2 se app restart karta hai   (without downtime)
- * > So, after this step, users instantly see your latest code.
+/** 
+ * Example Flow of CICD:
+ *
+ * Developer   →   GitHub   →   CI/CD Pipeline   →   Server
+ *   |               |               |                 |
+ *   |  git push     |               |                 |
+ *   |-------------->|  triggers     |                 |
+ *                   |-------------->|  test + build   |
+ *                                   |---------------->|  deploy + restart
+ *                                                     ↓
+ *                                               Users see new version 
 */
 
-/**
- * Secure Deployment (Secrets):
- * > Tumhe apna password ya private key directly file me nahi likhna 
- *   chahiye 
- * 
- * Use GitHub Secrets:
- * > Go to your repo → Settings → Secrets → Actions:
- * > Add:
- *     SERVER_IP = 1.2.3.4
- *     SERVER_USER = ubuntu
- *     SSH_PRIVATE_KEY = (paste your private SSH key)
- * 
- * > Then use these in YAML file:
- *     - name: Deploy to Server
- *       env:
- *         SERVER_IP: ${{ secrets.SERVER_IP }}
- *         SERVER_USER: ${{ secrets.SERVER_USER }}
- *         SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
- *       run: |
- *         echo "$SSH_PRIVATE_KEY" > key.pem
- *         chmod 600 key.pem
- *         ssh -i key.pem $SERVER_USER@$SERVER_IP "
- *           cd /var/www/myapp &&
- *           git pull origin main &&
- *           npm install &&
- *           pm2 restart all
- *         "
- *     
- * 
- * > Secrets = safe environment variables jo sirf GitHub ke andar secure
- *             rehte hain 
-*/ 
 
-
-/**
- * Final Result (Full Automated Flow):
- * > Developer pushes new code - 'git push origin main'
- * > GitHub Action automatically:
- *   - Runs npm install
- *   - Runs tests
- *   - SSH se server me login karta hai
- *   - Latest code pull karta hai
- *   - PM2 se app restart karta hai (no downtime)
- *   - Nginx already serving HTTPS - so users see updated secure app
- * 
- * > In short:
- *   Push Code > Auto Test > Auto Deploy > App live on HTTPS
-*/
-
-/**
- * Summary:
- * > GitHub Actions     = Automation System in GitHub
- * > .github/workflows/ = Folder where action files are stored
- * > YAML               = Config file format for defining actions
- * > Steps              = Commands that run automatically
- * > Secrets            = Store credentials safely (like SSH key)
- * 
- * What it achieves:
- * > Fully automated testing & deployment
- * > No manual SSH or uploads
- * > Fast & Safe delivery to users
-*/
 
 /**
  * Installation:
@@ -319,22 +321,3 @@ app.listen(port, () => {
 });
 
 module.exports = app;
-
-
-/**
- * Push it on GitHub:
- * > git init
- * > git add .
- * > git commit -m "test"
- * > git branch -M main  
- * > git remote add origin https://github.com/aslam-paasa/cicd-github-actions.git
- * > git push -u origin main
-*/
-
-/**
- * Deploy it on render:
- * > Click on:
- *   - Add New 
- *   - Web Service
- *   - Github-project: cicd-github-actions
-*/
