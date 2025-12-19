@@ -319,3 +319,22 @@ app.listen(port, () => {
 });
 
 module.exports = app;
+
+
+/**
+ * Push it on GitHub:
+ * > git init
+ * > git add .
+ * > git commit -m "test"
+ * > git branch -M main  
+ * > git remote add origin https://github.com/aslam-paasa/cicd-github-actions.git
+ * > git push -u origin main
+*/
+
+/**
+ * Deploy it on render:
+ * > Click on:
+ *   - Add New 
+ *   - Web Service
+ *   - Github-project: cicd-github-actions
+*/
